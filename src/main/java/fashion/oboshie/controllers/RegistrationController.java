@@ -26,4 +26,10 @@ public class RegistrationController {
     public String confirm(@RequestParam("token") String token) {
         return registrationService.confirmToken(token);
     }
+
+
+    @GetMapping(path = "disable")
+    public String disable(@RequestParam("token") String token) {
+        return registrationService.disableToken(token);
+    }
 }

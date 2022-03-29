@@ -69,6 +69,19 @@ public class RegistrationService {
         return "Token confirmed";
     }
 
+    @Transactional
+    public String disableToken(String token) {
+        ConfirmationToken confirmationToken = confirmationTokenService
+                .getToken(token)
+                .orElseThrow(() ->
+                        new IllegalStateException("token not found"));
+
+        confirmationTokenService.setExpiresAt(token);
+        appUserService.disableAppUser(
+                confirmationToken.getAppUser().getEmail());
+        return "Token disabled";
+    }
+
     private String buildEmail(String name, String link) {
         return "<div style=\"font-family:Helvetica,Arial,sans-serif;font-size:16px;margin:0;color:#0b0c0c\">\n" +
                 "\n" +
