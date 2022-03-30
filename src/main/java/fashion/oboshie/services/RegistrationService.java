@@ -19,15 +19,19 @@ public class RegistrationService {
     private final EmailValidator emailValidator;
     private final ConfirmationTokenService confirmationTokenService;
     private final EmailSender emailSender;
+    private final PasswordValidatorService passwordValidatorService;
 
     public String register(RegistrationRequest request) {
         boolean isValidEmail = emailValidator.
                 test(request.getEmail());
-
         if (!isValidEmail) {
             throw new IllegalStateException("email not valid");
         }
 
+        boolean isValidPassword = passwordValidatorService.isPasswordSecured(request.getPassword());
+        if (!isValidPassword) {
+            throw new IllegalStateException("Password must be at least 8 characters long");
+        }
         String token = appUserService.signUpUser(
             new AppUser(
                 request.getFirstName(),
