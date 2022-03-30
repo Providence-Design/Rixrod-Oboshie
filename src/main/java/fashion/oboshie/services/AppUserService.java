@@ -54,6 +54,15 @@ public class AppUserService implements UserDetailsService {
         return  appUserRepository.disableAppUser(email);
     }
 
+    public String lockAppUser(long id){
+        appUserRepository.lockAppUser(id);
+        return "Account locked";
+    }
+    public String unlockAppUser(long id){
+        appUserRepository.unlockAppUser(id);
+        return "Account has been unlocked";
+    }
+
 
 
 
