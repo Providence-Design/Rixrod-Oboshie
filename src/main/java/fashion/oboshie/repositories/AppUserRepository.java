@@ -30,8 +30,8 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
      @Transactional
      @Modifying
-     @Query("UPDATE AppUser a " + "SET a.locked = FALSE WHERE a.id = ?1")
-     int unlockAppUser(long id);
+     @Query("UPDATE AppUser a " + "SET a.locked = FALSE WHERE a.email = ?1")
+     int unlockAppUser(String email );
 
 
 }

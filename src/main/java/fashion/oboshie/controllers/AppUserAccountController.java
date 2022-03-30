@@ -1,10 +1,14 @@
 package fashion.oboshie.controllers;
 
+import fashion.oboshie.models.AppUserPasswordResetRequest;
 import fashion.oboshie.services.AppUserService;
 import lombok.AllArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -13,13 +17,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AppUserAccountController {
     private final AppUserService appUserService;
 
-   @PutMapping(path = "lock")
-    public String  appUserLock(@RequestBody long id){
-       return appUserService.lockAppUser(id);
+   @PostMapping(path = "reset-password")
+    public String  resetAppUserPassword(@RequestBody AppUserPasswordResetRequest appUserPasswordResetRequest){
+       return appUserService.resetPassword(appUserPasswordResetRequest);
    }
 
-   @PutMapping(path = "unlock")
-    public String appUserUnlock(@RequestBody long id){
-       return appUserService.unlockAppUser(id);
-   }
+    @GetMapping(path = "unlock")
+    public String confirm(@RequestParam("token") String token) {
+        return appUserService.unlockAppUser(token);
+    }
 }

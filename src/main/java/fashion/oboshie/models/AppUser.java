@@ -34,7 +34,7 @@ public class AppUser implements UserDetails {
     private String firstName;
     @Column(nullable = false, length = 100)
     private String lastName;
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 100, unique = true)
     private String email;
     @Column(nullable = false, length = 100)
     private String password;
