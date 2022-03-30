@@ -1,7 +1,9 @@
 package fashion.oboshie.services;
 
 import fashion.oboshie.models.AppUser;
+import fashion.oboshie.models.AppUserPasswordResetRequest;
 import fashion.oboshie.models.ConfirmationToken;
+import fashion.oboshie.models.EmailSender;
 import fashion.oboshie.repositories.AppUserRepository;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
@@ -11,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -23,6 +26,9 @@ public class AppUserService implements UserDetailsService {
     private final AppUserRepository appUserRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final ConfirmationTokenService confirmationTokenService;
+    private final EmailSender emailSender;
+    private final EmailService emailService;
+    private final PasswordValidatorService passwordValidatorService;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -54,13 +60,53 @@ public class AppUserService implements UserDetailsService {
         return  appUserRepository.disableAppUser(email);
     }
 
-    public String lockAppUser(long id){
-        appUserRepository.lockAppUser(id);
-        return "Account locked";
+    @Transactional
+    public String unlockAppUser(String token){
+        ConfirmationToken confirmationToken = confirmationTokenService
+                .getToken(token)
+                .orElseThrow(() ->
+                        new IllegalStateException("token not found"));
+
+        if (confirmationToken.getConfirmedAt() != null) {
+            throw new IllegalStateException("Account already unlocked");
+        }
+
+        LocalDateTime expiredAt = confirmationToken.getExpiresAt();
+
+        if (expiredAt.isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("token expired");
+        }
+
+        appUserRepository.unlockAppUser(confirmationToken.getAppUser().getEmail());
+        confirmationTokenService.setConfirmedAt(token);
+        return "Account unlocked";
     }
-    public String unlockAppUser(long id){
-        appUserRepository.unlockAppUser(id);
-        return "Account has been unlocked";
+
+    @Transactional
+    public String resetPassword(AppUserPasswordResetRequest appUserPasswordResetRequest){
+        AppUser user = appUserRepository.findByEmail(appUserPasswordResetRequest.getEmail()).orElseThrow(() ->
+                new UsernameNotFoundException(String.format(USER_NOT_FOUND_MESSAGE, appUserPasswordResetRequest.getEmail())));
+
+        boolean isValidPassword = passwordValidatorService.isPasswordSecured(appUserPasswordResetRequest.getNewPassword());
+        if (!isValidPassword){
+            throw new IllegalStateException("Password must be at least 8 characters long");
+        }
+
+        String encodedPassword = bCryptPasswordEncoder.encode(appUserPasswordResetRequest.getNewPassword());
+        user.setPassword(encodedPassword);
+        user.setLocked(true);
+        appUserRepository.save(user);
+
+        String token = UUID.randomUUID().toString();
+        ConfirmationToken confirmationToken = new ConfirmationToken(token, LocalDateTime.now(), LocalDateTime.now().plusMinutes(15), user);
+        confirmationTokenService.saveConfirmationToken(confirmationToken);
+
+        String link = "http://localhost:8080/api/v1/account/unlock?token=" + token;
+        emailSender.send(
+                user.getEmail(),
+                emailService.buildEmail(user.getFirstName(), link));
+
+        return "Password reset successful";
     }
 
 
