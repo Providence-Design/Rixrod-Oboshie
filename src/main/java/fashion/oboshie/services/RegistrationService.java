@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class RegistrationService {
 
+    private final String CONFIRM_EMAIL_SUBJECT = "Oboshie Fasion💃: Confirm your email";
+    private final String CONFIRM_EMAIL_MESSAGE = "Thank you for registering. Please click on the below link to activate your account:";
     private final AppUserService appUserService;
     private final EmailValidator emailValidator;
     private final ConfirmationTokenService confirmationTokenService;
@@ -43,10 +45,11 @@ public class RegistrationService {
             )
         );
 
-        String link = "http://localhost:8080/api/v1/registration/confirm?token=" + token;
+        String link = "http://localhost:8080/api/v1/authentication/confirm?token=" + token;
         emailSender.send(
                 request.getEmail(),
-                emailService.buildEmail(request.getFirstName(), link));
+                emailService.buildEmail(request.getFirstName(), link, CONFIRM_EMAIL_SUBJECT, CONFIRM_EMAIL_MESSAGE),
+                CONFIRM_EMAIL_SUBJECT);
 
         return token;
     }

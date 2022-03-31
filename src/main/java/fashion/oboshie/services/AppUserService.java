@@ -22,6 +22,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AppUserService implements UserDetailsService {
     private final static String USER_NOT_FOUND_MESSAGE = "User with email %s not found";
+    private final String UNLOCK_EMAIL_SUBJECT = "Oboshie Fasion💃: Unlock your Account";
+    private final String UNLOCK_EMAIL_MESSAGE = "Your request has been received.\n" +
+            "To ensure that you triggered this request, your account has been locked.\n" +
+            "Please click on the below link to unlock your account:";
     private static final Logger LOGGER = LoggerFactory.getLogger(AppUserService.class);
     private final AppUserRepository appUserRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
@@ -83,12 +87,18 @@ public class AppUserService implements UserDetailsService {
     }
 
     @Transactional
-    public String resetPassword(AppUserPasswordResetRequest appUserPasswordResetRequest){
+    public boolean resetPassword(AppUserPasswordResetRequest appUserPasswordResetRequest){
+        LOGGER.info(
+                "===================================\n" +
+                "PASSWORD RESET" +
+                "===================================\n" +
+                "Password reset initiated for ${}", appUserPasswordResetRequest);
         AppUser user = appUserRepository.findByEmail(appUserPasswordResetRequest.getEmail()).orElseThrow(() ->
                 new UsernameNotFoundException(String.format(USER_NOT_FOUND_MESSAGE, appUserPasswordResetRequest.getEmail())));
 
         boolean isValidPassword = passwordValidatorService.isPasswordSecured(appUserPasswordResetRequest.getNewPassword());
         if (!isValidPassword){
+            LOGGER.error("Invalid Password: Password must be at least 8 characters long");
             throw new IllegalStateException("Password must be at least 8 characters long");
         }
 
@@ -96,17 +106,20 @@ public class AppUserService implements UserDetailsService {
         user.setPassword(encodedPassword);
         user.setLocked(true);
         appUserRepository.save(user);
+        LOGGER.info("Password has been reset and user account locked... Generating confirmation email now...");
 
         String token = UUID.randomUUID().toString();
         ConfirmationToken confirmationToken = new ConfirmationToken(token, LocalDateTime.now(), LocalDateTime.now().plusMinutes(15), user);
         confirmationTokenService.saveConfirmationToken(confirmationToken);
 
-        String link = "http://localhost:8080/api/v1/account/unlock?token=" + token;
+        String link = "http://localhost:8080/api/v1/authentication/unlock?token=" + token;
         emailSender.send(
                 user.getEmail(),
-                emailService.buildEmail(user.getFirstName(), link));
+                emailService.buildEmail(user.getFirstName(), link, UNLOCK_EMAIL_SUBJECT, UNLOCK_EMAIL_MESSAGE),
+                UNLOCK_EMAIL_SUBJECT);
+        LOGGER.error("Password reset confirmation email has been sent to ${}", user.getEmail());
 
-        return "Password reset successful";
+        return true;
     }
 
 
