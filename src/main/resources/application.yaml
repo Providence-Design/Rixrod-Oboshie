@@ -43,3 +43,9 @@ app:
     base: http://localhost:8080/
     registration: api/v1/registration/
     token.confirmation: confirm?token=
+
+api-docs.path: /v3/api-docs
+# Disabling the /v3/api-docs endpoint
+springdoc.api-docs.enabled: false
+# Disabling the swagger-ui
+springdoc.swagger-ui.enabled: false
