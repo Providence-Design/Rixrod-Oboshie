@@ -33,13 +33,21 @@ spring:
           timeout: 3000
           writetimeout: 5000
 
-app:
-  name: Oboshie Fasion💃
-  mail:
-    confirmation:
-      from: confirmation@oboshie-fasion.com
-      subject: Confirm your email
-  url:
-    base: http://localhost:8080/
-    registration: api/v1/registration/
-    token.confirmation: confirm?token=
+  app:
+    name: Oboshie Fasion
+    mail:
+      confirmation:
+        from: confirmation@oboshie-fasion.com
+        subject: Confirm your email
+    url:
+      base: http://localhost:8080/
+      registration: api/v1/registration/
+      token:
+        confirmation: confirm?token=
+        unlock: unlock?token=
+
+api-docs.path: /v3/api-docs
+# Disabling the /v3/api-docs endpoint
+springdoc.api-docs.enabled: false
+# Disabling the swagger-ui
+springdoc.swagger-ui.enabled: false

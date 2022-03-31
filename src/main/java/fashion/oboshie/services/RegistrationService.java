@@ -15,6 +15,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class RegistrationService {
 
+    private final String CONFIRM_EMAIL_SUBJECT = "Oboshie Fasion💃: Confirm your email";
+    private final String CONFIRM_EMAIL_MESSAGE = "Thank you for registering. Please click on the below link to activate your account:";
+
+    private final String BASE_URL = "http://localhost:8080/";
     private final AppUserService appUserService;
     private final EmailValidator emailValidator;
     private final ConfirmationTokenService confirmationTokenService;
@@ -22,11 +26,12 @@ public class RegistrationService {
     private final PasswordValidatorService passwordValidatorService;
     private final EmailService emailService;
 
+    @Transactional
     public String register(RegistrationRequest request) {
         boolean isValidEmail = emailValidator.
                 test(request.getEmail());
         if (!isValidEmail) {
-            throw new IllegalStateException("email not valid");
+            throw new IllegalStateException("Email not valid");
         }
 
         boolean isValidPassword = passwordValidatorService.isPasswordSecured(request.getPassword());
@@ -43,12 +48,14 @@ public class RegistrationService {
             )
         );
 
-        String link = "http://localhost:8080/api/v1/registration/confirm?token=" + token;
+        String link = BASE_URL+"api/v1/authentication/confirm?token=" + token;
+//        URI link = URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("api/v1/authentication/confirm?token=" + token).toUriString());
         emailSender.send(
                 request.getEmail(),
-                emailService.buildEmail(request.getFirstName(), link));
+                emailService.buildEmail(request.getFirstName(), link, CONFIRM_EMAIL_SUBJECT, CONFIRM_EMAIL_MESSAGE),
+                CONFIRM_EMAIL_SUBJECT);
 
-        return token;
+        return link;
     }
 
     @Transactional
@@ -56,16 +63,16 @@ public class RegistrationService {
         ConfirmationToken confirmationToken = confirmationTokenService
                 .getToken(token)
                 .orElseThrow(() ->
-                        new IllegalStateException("token not found"));
+                        new IllegalStateException("Token not found"));
 
         if (confirmationToken.getConfirmedAt() != null) {
-            throw new IllegalStateException("email already confirmed");
+            throw new IllegalStateException("Email already confirmed");
         }
 
         LocalDateTime expiredAt = confirmationToken.getExpiresAt();
 
         if (expiredAt.isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("token expired");
+            throw new IllegalStateException("Token expired");
         }
 
         confirmationTokenService.setConfirmedAt(token);

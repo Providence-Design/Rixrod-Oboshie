@@ -20,11 +20,11 @@ import javax.persistence.SequenceGenerator;
 import java.util.Collection;
 import java.util.Collections;
 
+@Entity
 @NoArgsConstructor
 @Getter
 @Setter
 @EqualsAndHashCode
-@Entity
 public class AppUser implements UserDetails {
     @Id
     @SequenceGenerator(name = "user_sequence", sequenceName = "user_sequence", allocationSize = 1)
