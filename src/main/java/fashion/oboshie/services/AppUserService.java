@@ -39,6 +39,7 @@ public class AppUserService implements UserDetailsService {
         return appUserRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException(String.format(USER_NOT_FOUND_MESSAGE, email)));
     }
 
+    @Transactional
     public String signUpUser(AppUser appUser){
         boolean userExists = appUserRepository.findByEmail(appUser.getEmail()).isPresent();
         if(userExists){
@@ -121,8 +122,4 @@ public class AppUserService implements UserDetailsService {
 
         return true;
     }
-
-
-
-
 }

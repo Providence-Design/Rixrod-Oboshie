@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
+
 @RestController
 @RequestMapping(path = "api/v1/authentication")
 @AllArgsConstructor
@@ -33,36 +35,32 @@ public class AuthenticationController {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
 
-    @PostMapping
-    public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest request) throws Exception {
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
-        }catch (BadCredentialsException e){
-            throw new Exception("Incorrect email or password");
-        }
+//    @PostMapping
+//    public ResponseEntity<?> login(@RequestBody AuthenticationRequest request) throws Exception {
+//        try {
+//            authenticationManager.authenticate(
+//                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+//            );
+//        }catch (BadCredentialsException e){
+//            throw new Exception("Incorrect email or password");
+//        }
+//
+//        final AppUser user = (AppUser) appUserService.loadUserByUsername(request.getEmail());
+////        final String jwt = jwtUtil.generateTokens(user, request);
+//        return ResponseEntity.ok().body(user);
+//    }
 
-        final AppUser user = (AppUser) appUserService.loadUserByUsername(request.getEmail());
-        final String jwt = jwtUtil.generateToken(user);
-        return ResponseEntity.ok(new AuthenticationResponse(jwt));
-    }
 
     @PostMapping(path = "register")
-    public String register(@RequestBody RegistrationRequest request){
-        return registrationService.register(request);
+    public ResponseEntity<String> register(@RequestBody RegistrationRequest request){
+        String link = registrationService.register(request);
+        return ResponseEntity.created(URI.create(link)).body("Registration successful");
     }
 
     @GetMapping(path = "confirm")
     public String confirm(@RequestParam("token") String token) {
         return registrationService.confirmToken(token);
     }
-
-
-//    @GetMapping(path = "disable")
-//    public String disable(@RequestParam("token") String token) {
-//        return registrationService.disableToken(token);
-//    }
 
     @PostMapping(path = "reset-password")
     public ResponseEntity<?>  resetAppUserPassword(@RequestBody AppUserPasswordResetRequest appUserPasswordResetRequest){
