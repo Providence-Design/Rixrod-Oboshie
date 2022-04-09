@@ -1,10 +1,12 @@
 package fashion.oboshie.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fashion.oboshie.models.AppUser;
 import fashion.oboshie.models.AppUserPasswordResetRequest;
 import fashion.oboshie.models.ConfirmationToken;
 import fashion.oboshie.models.EmailSender;
 import fashion.oboshie.repositories.AppUserRepository;
+import fashion.oboshie.utils.JwtUtil;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,13 +17,22 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
+
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Service
 @AllArgsConstructor
 public class AppUserService implements UserDetailsService {
     private final static String USER_NOT_FOUND_MESSAGE = "User with email %s not found";
+    private static final String LOGGER_TOPIC ="AppUserService" ;
     private final String UNLOCK_EMAIL_SUBJECT = "Oboshie Fasion💃: Unlock your Account";
     private final String UNLOCK_EMAIL_MESSAGE = "Your request has been received.\n" +
             "To ensure that you triggered this request, your account has been locked.\n" +
@@ -33,6 +44,7 @@ public class AppUserService implements UserDetailsService {
     private final EmailSender emailSender;
     private final EmailService emailService;
     private final PasswordValidatorService passwordValidatorService;
+    private final JwtUtil jwtUtil;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -121,5 +133,37 @@ public class AppUserService implements UserDetailsService {
         LOGGER.error("Password reset confirmation email has been sent to ${}", user.getEmail());
 
         return true;
+    }
+    @Transactional
+    public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        LOGGER.info("{}: refreshToken running...", LOGGER_TOPIC);
+        final String authorizationHeader = request.getHeader(AUTHORIZATION);
+        String AUTHORIZATION_HEADER_STARTER = "Oboshie ";
+        if (authorizationHeader != null && authorizationHeader.startsWith(AUTHORIZATION_HEADER_STARTER)){
+            try {
+                String refreshToken = authorizationHeader.substring(AUTHORIZATION_HEADER_STARTER.length());
+                String email = jwtUtil.extractEmail(refreshToken);
+                AppUser user = (AppUser) this.loadUserByUsername(email);
+                if (jwtUtil.validateToken(refreshToken, user)){
+                    String accessToken = jwtUtil.createAccessToken(user, request);
+                    Map<String, String> tokens = Map.of("access_token", accessToken, "refresh_token", refreshToken);
+                    response.setContentType(APPLICATION_JSON_VALUE);
+                    new ObjectMapper().writeValue(response.getOutputStream(), tokens);
+                }else{
+                    LOGGER.error("{}: Invalid refresh token {}", LOGGER_TOPIC, refreshToken);
+                    throw new RuntimeException("Invalid refresh token " + refreshToken);
+                }
+            }catch (Exception e){
+                LOGGER.error("{}: Error logging in: {}", LOGGER_TOPIC, e.getMessage());
+                response.setHeader("error", e.getMessage());
+                response.setStatus(FORBIDDEN.value());
+                Map<String, String> error = Map.of("error_message", e.getMessage());
+                response.setContentType(APPLICATION_JSON_VALUE);
+                new ObjectMapper().writeValue(response.getOutputStream(), error);
+            }
+        }else{
+            LOGGER.error("{}: AuthorizationHeader={} is either null or AuthorizationHeader must start with \"{}\"", LOGGER_TOPIC, authorizationHeader, AUTHORIZATION_HEADER_STARTER);
+            throw new RuntimeException("Refresh token is missing");
+        }
     }
 }

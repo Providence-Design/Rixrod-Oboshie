@@ -76,4 +76,8 @@ public class JwtUtil {
         final String email = extractEmail(token);
         return (email.equals(appUser.getEmail()) && !isTokenExpired(token));
     }
+
+    public String createAccessToken(AppUser appUser, HttpServletRequest request){
+        return this.createToken(appUser, request);
+    }
 }
